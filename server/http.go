@@ -47,40 +47,30 @@ func ListenHTTP(exit <-chan util.Void) {
 }
 
 func handleHTTP(w http.ResponseWriter, r *http.Request) {
-	var err error
-	defer func() {
-		if err != nil &&
-			!errors.Is(err, syscall.EPIPE) &&
-			!errors.Is(err, syscall.ECONNRESET) {
-			logger.Get().Error("http request",
-				zap.Error(err),
-				zap.String("host", r.Host),
-				zap.String("uri", r.RequestURI),
-				zap.String("client ip", util.GetRealIP(r)))
-		}
-	}()
-
-	if r.Method != "GET" && r.Method != "HEAD" &&
-		r.Method != "OPTION" {
-		err = handleDirectHTTP(w, r)
-		return
-	}
-
-	if config.Rules().AllowAuth &&
+	cantCacheMethod := r.Method != "GET" &&
+		r.Method != "HEAD" &&
+		r.Method != "OPTION"
+	cantCacheAuth := config.Rules().AllowAuth &&
 		(r.Header.Get("Authorization") != "" ||
 			r.Header.Get("Cookie") != "" ||
-			r.URL.User != nil) {
+			r.URL.User != nil)
+
+	var err error
+	if cantCacheMethod || cantCacheAuth {
 		err = handleDirectHTTP(w, r)
-		return
+	} else {
+		err = handleCachedHTTP(w, r)
 	}
 
-	ctx, cancel := context.WithDeadlineCause(
-		r.Context(),
-		time.Now().Add(config.Server().FetchTimeout),
-		errors.New("timeout while fetching upstream"))
-	defer cancel()
-
-	err = handleCachedHTTP(w, r.WithContext(ctx))
+	if err != nil &&
+		!errors.Is(err, syscall.EPIPE) &&
+		!errors.Is(err, syscall.ECONNRESET) {
+		logger.Get().Error("http request",
+			zap.Error(err),
+			zap.String("host", r.Host),
+			zap.String("uri", r.RequestURI),
+			zap.String("client ip", util.GetRealIP(r)))
+	}
 }
 
 // directHTTP bypasses the caching layer
@@ -128,22 +118,25 @@ func handleCachedHTTP(w http.ResponseWriter, r *http.Request) error {
 	entry, state := cache.Get(key)
 	var err error
 
+	if state != cache.Ok {
+		// time.Now() adds noticeable CPU cost on some platform
+		ctx, cancel := context.WithDeadlineCause(
+			r.Context(),
+			time.Now().Add(config.Server().FetchTimeout),
+			errors.New("timeout while fetching upstream"))
+		defer cancel()
+		r = r.WithContext(ctx)
+	}
+
 	switch state {
-	case cache.Ok: // cache hit
 	case cache.Wait:
 		if err = entry.Wait(r.Context()); err != nil {
 			return fmt.Errorf("incomplete cache entry: %w", err)
 		}
 	case cache.Miss:
-		defer func() {
-			if e := recover(); e != nil {
-				cache.Del(key)
-				entry.AfterInit(false)
-				err = fmt.Errorf("cached proxy panicked: %v", e)
-			}
-		}()
 		cw := &cacheWriterHTTP{w: w, e: entry}
 		cachedHTTP.ServeHTTP(cw, r)
+
 		if cw.filtered {
 			cache.Del(key)
 		}
@@ -153,6 +146,7 @@ func handleCachedHTTP(w http.ResponseWriter, r *http.Request) error {
 			err = fmt.Errorf("serving fresh response: %w", err)
 		}
 		return err
+	default:
 	}
 
 	// serve from cache
