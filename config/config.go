@@ -45,24 +45,27 @@ type server struct {
 
 	// Corresponds to http.Server.IdleTimeout
 	IdleTimeout    time.Duration `json:"-" yaml:"-"`
-	IdleTimeoutStr *duration     `json:"idle_timeout" yaml:"idle_timeout"`
+	IdleTimeoutStr duration      `json:"idle_timeout" yaml:"idle_timeout"`
 
 	// Corresponds to http.Server.ReadTimeout
 	ReadTimeout    time.Duration `json:"-" yaml:"-"`
-	ReadTimeoutStr *duration     `json:"read_timeout" yaml:"read_timeout"`
+	ReadTimeoutStr duration      `json:"read_timeout" yaml:"read_timeout"`
 
 	// Corresponds to http.Server.WriteTimeout
 	WriteTimeout    time.Duration `json:"-" yaml:"-"`
-	WriteTimeoutStr *duration     `json:"write_timeout" yaml:"write_timeout"`
+	WriteTimeoutStr duration      `json:"write_timeout" yaml:"write_timeout"`
 
 	// Cancel request if upstream doesn't respond within this amount of time
 	FetchTimeout    time.Duration `json:"-" yaml:"-"`
-	FetchTimeoutStr *duration     `json:"fetch_timeout" yaml:"fetch_timeout"`
+	FetchTimeoutStr duration      `json:"fetch_timeout" yaml:"fetch_timeout"`
 }
 
 type log struct {
-	Location string `json:"location" yaml:"location"` // Log file location
+	// Log level, e.g. debug, info, warn, error, panic, fatal
+	Level string `json:"level" yaml:"level"`
+
 	UseJSON  bool   `json:"use_json" yaml:"use_json"` // Format logs as JSON
+	Location string `json:"location" yaml:"location"` // Log file location
 }
 
 type rules struct {
@@ -91,7 +94,7 @@ type rules struct {
 	AllowAuth bool `json:"allow_auth" yaml:"allow_auth"`
 
 	// Whether to detect mobile UA and cache the responses separately
-	CheckMobileUA bool `json:"check_mobile_ua" yaml:"check_mobile_ua"`
+	CheckMobile bool `json:"check_mobile" yaml:"check_mobile"`
 }
 
 func (r *rules) GetTarget(host string) *url.URL {
@@ -126,6 +129,7 @@ var defaultE = everything{
 		FetchTimeout: 30 * time.Second,
 	},
 	Log: log{
+		Level:    "info",
 		Location: "stderr",
 	},
 	Rules: rules{

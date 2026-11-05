@@ -1,0 +1,28 @@
+# Refer to config/config.go for a full list of fields and explainations
+# This is for demonstration only, not a ready-to-use solution
+
+cache:
+  capacity: 300M
+server:
+  # Zero or negative timeouts will be ignored
+  idle_timeout: 20s
+  read_timeout: 20s
+  write_timeout: 20s
+  fetch_timeout: 20s
+log:
+  level: warn
+  location: error.log
+rules:
+  # Use the empty array [] to allow any response
+  # By default it allows 200 status code if left unset
+  status_filter:
+    - 200
+    - 301
+    - 302
+    - 307
+    - 308
+  vary_headers:
+    - Origin
+  check_mobile: true
+  # `targets` will be ignored if `target` is set
+  target: http://localhost:1124

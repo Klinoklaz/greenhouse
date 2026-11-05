@@ -117,7 +117,7 @@ func (e *Entry) Wait(ctx context.Context) error {
 	case <-*ready:
 		return nil
 	case <-ctx.Done():
-		return errors.New("timeout while waiting for data")
+		return errors.New("request cancelled while waiting for data")
 	}
 }
 

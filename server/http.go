@@ -69,7 +69,7 @@ func handleHTTP(w http.ResponseWriter, r *http.Request) {
 			zap.Error(err),
 			zap.String("host", r.Host),
 			zap.String("uri", r.RequestURI),
-			zap.String("client ip", util.GetRealIP(r)))
+			zap.String("client", util.GetRealIP(r)))
 	}
 }
 
@@ -134,6 +134,13 @@ func handleCachedHTTP(w http.ResponseWriter, r *http.Request) error {
 			return fmt.Errorf("incomplete cache entry: %w", err)
 		}
 	case cache.Miss:
+		logger.Get().Debug("http request cache miss",
+			zap.String("host", r.Host),
+			zap.String("uri", r.RequestURI),
+			zap.Any("header", r.Header),
+			zap.Any("key", key),
+			zap.String("client", util.GetRealIP(r)))
+
 		cw := &cacheWriterHTTP{w: w, e: entry}
 		cachedHTTP.ServeHTTP(cw, r)
 
@@ -164,7 +171,7 @@ func handleCachedHTTP(w http.ResponseWriter, r *http.Request) error {
 // keygenHTTP generates cache key from HTTP request info
 func keygenHTTP(r *http.Request) cache.Hash {
 	h := xxh3.New128()
-	if config.Rules().CheckMobileUA &&
+	if config.Rules().CheckMobile &&
 		strings.Contains(r.Header.Get("User-Agent"), "Mobi") {
 		h.Write([]byte{1})
 	} else {

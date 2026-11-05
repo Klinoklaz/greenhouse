@@ -1,4 +1,6 @@
 .vscode/
 vendor/
 greenhouse
+*.log
 profile*
+devconf.yaml

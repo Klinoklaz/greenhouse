@@ -127,6 +127,9 @@ func LoadFile(file string) error {
 	if tmp.Server.ListenAddr == "" {
 		tmp.Server.ListenAddr = Server().ListenAddr
 	}
+	if tmp.Log.Level == "" {
+		tmp.Log.Level = Log().Level
+	}
 	if tmp.Log.Location == "" {
 		tmp.Log.Location = Log().Location
 	}
@@ -134,23 +137,24 @@ func LoadFile(file string) error {
 		tmp.Rules.StatusFilter = Rules().StatusFilter
 	}
 
-	if i := tmp.Server.IdleTimeoutStr; i != nil {
-		tmp.Server.IdleTimeout = time.Duration(*i)
+	// not having timeouts doesn't make sense
+	if i := tmp.Server.IdleTimeoutStr; i > 0 {
+		tmp.Server.IdleTimeout = time.Duration(i)
 	} else {
 		tmp.Server.IdleTimeout = Server().IdleTimeout
 	}
-	if r := tmp.Server.ReadTimeoutStr; r != nil {
-		tmp.Server.ReadTimeout = time.Duration(*r)
+	if r := tmp.Server.ReadTimeoutStr; r > 0 {
+		tmp.Server.ReadTimeout = time.Duration(r)
 	} else {
 		tmp.Server.ReadTimeout = Server().ReadTimeout
 	}
-	if w := tmp.Server.WriteTimeoutStr; w != nil {
-		tmp.Server.WriteTimeout = time.Duration(*w)
+	if w := tmp.Server.WriteTimeoutStr; w > 0 {
+		tmp.Server.WriteTimeout = time.Duration(w)
 	} else {
 		tmp.Server.WriteTimeout = Server().WriteTimeout
 	}
-	if f := tmp.Server.FetchTimeoutStr; f != nil {
-		tmp.Server.FetchTimeout = time.Duration(*f)
+	if f := tmp.Server.FetchTimeoutStr; f > 0 {
+		tmp.Server.FetchTimeout = time.Duration(f)
 	} else {
 		tmp.Server.FetchTimeout = Server().FetchTimeout
 	}
