@@ -215,15 +215,14 @@ func keygenHTTP(r *http.Request) cache.Hash {
 	}
 	binary.Write(h, order, uint16(len(r.RequestURI)))
 	h.WriteString(r.RequestURI)
-	for i, name := range config.Rules().VaryHeaders {
+	for _, name := range config.Rules().VaryHeaders {
 		value := r.Header.Get(name)
 		if value == "" {
 			continue
 		}
-		// NOTE: using index instead of header name makes
-		// config.Rules().VaryHeaders unchangeable after process init
-		binary.Write(h, order, uint8(i))
-		binary.Write(h, order, uint16(len(value)))
+		binary.Write(h, order, uint16(len(name)+len(value)+1))
+		h.WriteString(name)
+		h.WriteString(":")
 		h.WriteString(value)
 	}
 	return h.Sum128()

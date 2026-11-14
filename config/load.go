@@ -86,25 +86,6 @@ func LoadFile(file string) error {
 		return fmt.Errorf(
 			"incomplete target url: '%s'", tmp.Rules.Target.Val)
 	}
-	// modify VaryHeaders slice without changing index
-	if old := Rules().VaryHeaders; old != nil {
-		current := tmp.Rules.VaryHeaders
-		m := make(map[string]bool, len(current))
-		for _, v := range current {
-			m[v] = true
-		}
-		for i, v := range old {
-			if !m[v] {
-				old[i] = ""
-			} else {
-				delete(m, v)
-			}
-		}
-		for v := range m {
-			old = append(old, v)
-		}
-		tmp.Rules.VaryHeaders = old
-	}
 
 	// handle optional fields, use default or old value if absent
 	if c := util.ParseByteSize(tmp.Cache.CapacityStr); c > 0 {
